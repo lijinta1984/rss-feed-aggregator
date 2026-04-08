@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Article, Subscription } from '@/lib/types';
 import { FaviconImage } from './FeedCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ArticleCardProps {
   article: Article;
@@ -35,6 +36,7 @@ export default function ArticleCard({
   onRead,
   onBookmark,
 }: ArticleCardProps) {
+  const { session } = useAuth();
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(article.summary);
@@ -51,7 +53,10 @@ export default function ArticleCard({
     try {
       const response = await fetch('/api/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({
           article_id: article.id,
           content: article.content_snippet,

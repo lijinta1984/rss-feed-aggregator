@@ -11,7 +11,7 @@ const TOPICS = [
 ];
 
 export default function OnboardingPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const router = useRouter();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +58,10 @@ export default function OnboardingPage() {
             try {
               await fetch('/api/fetch-articles', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session?.access_token}`,
+                },
                 body: JSON.stringify({
                   feed_url: feed.feed_url,
                   subscription_id: sub.id,

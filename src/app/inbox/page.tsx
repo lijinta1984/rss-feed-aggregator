@@ -259,7 +259,6 @@ function InboxContent() {
                   isBookmarked={savedArticleIds.has(article.id)}
                   onRead={handleReadArticle}
                   onBookmark={handleBookmark}
-                  onSummarize={() => {}}
                 />
               ))}
             </div>

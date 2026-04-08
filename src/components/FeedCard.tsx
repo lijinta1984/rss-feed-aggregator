@@ -41,7 +41,7 @@ function FaviconImage({ src, title }: { src: string; title: string }) {
 export { FaviconImage };
 
 export default function FeedCard({ feed, isFollowing: initialFollowing = false, onFollowChange, onAuthRequired }: FeedCardProps) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -101,7 +101,10 @@ export default function FeedCard({ feed, isFollowing: initialFollowing = false, 
           if (sub) {
             await fetch('/api/fetch-articles', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`,
+              },
               body: JSON.stringify({
                 feed_url: feed.feed_url,
                 subscription_id: sub.id,

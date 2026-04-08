@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Parser from 'rss-parser';
 import { createServerClient } from '@/lib/supabase';
-import { supabase as supabaseClient } from '@/lib/supabase';
 
 const parser = new Parser({
   timeout: 10000,
@@ -24,17 +23,32 @@ function isValidFeedUrl(url: string): boolean {
   }
 }
 
+function safeDateToISO(dateStr: string | undefined): string {
+  if (!dateStr) return new Date().toISOString();
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return new Date().toISOString();
+    return d.toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
+    // Verify authentication via Bearer token validated against Supabase
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || request.cookies.get('sb-access-token')?.value;
+    const token = authHeader?.replace('Bearer ', '');
 
     if (!token) {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-      }
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const supabase = createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
     const { feed_url, subscription_id } = await request.json();
@@ -53,8 +67,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify subscription belongs to the authenticated user
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('id', subscription_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!sub) {
+      return NextResponse.json({ error: 'Subscription not found' }, { status: 403 });
+    }
+
     const feed = await parser.parseURL(feed_url);
-    const supabase = createServerClient();
     
     let newCount = 0;
     const articles = (feed.items || []).slice(0, 30).map((item) => ({
@@ -62,7 +87,7 @@ export async function POST(request: NextRequest) {
       title: item.title || 'Untitled',
       url: item.link || '',
       content_snippet: (item.contentSnippet || item.content || '').substring(0, 1000),
-      published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+      published_at: safeDateToISO(item.pubDate),
       is_read: false,
     }));
 

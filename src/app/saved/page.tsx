@@ -155,7 +155,6 @@ export default function SavedPage() {
                   isBookmarked={savedArticleIds.has(article.id)}
                   onRead={setSelectedArticle}
                   onBookmark={handleBookmark}
-                  onSummarize={() => {}}
                 />
               ))}
             </div>

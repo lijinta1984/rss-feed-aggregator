@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
-import { supabase as supabaseClient } from '@/lib/supabase';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -9,15 +8,19 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
+    // Verify authentication via Bearer token validated against Supabase
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || request.cookies.get('sb-access-token')?.value;
+    const token = authHeader?.replace('Bearer ', '');
 
     if (!token) {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-      }
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const supabase = createServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
     const { article_id, content } = await request.json();
@@ -28,8 +31,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const supabase = createServerClient();
 
     // Check if summary already exists
     const { data: existing } = await supabase
