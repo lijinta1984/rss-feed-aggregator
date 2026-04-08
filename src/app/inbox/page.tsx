@@ -108,11 +108,23 @@ function InboxContent() {
     if (!subs) return;
     const subIds = subs.map((s) => s.id);
 
-    await supabase
+    let query = supabase
       .from('articles')
       .update({ is_read: true })
       .in('subscription_id', subIds)
       .eq('is_read', false);
+
+    if (activeFilter) {
+      query = query.eq('subscription_id', activeFilter);
+    }
+
+    if (viewMode === 'today') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      query = query.gte('published_at', yesterday.toISOString());
+    }
+
+    await query;
 
     setArticles((prev) => prev.map((a) => ({ ...a, is_read: true })));
   };
