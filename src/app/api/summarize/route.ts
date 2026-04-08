@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -8,6 +9,17 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '') || request.cookies.get('sb-access-token')?.value;
+
+    if (!token) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+    }
+
     const { article_id, content } = await request.json();
 
     if (!article_id || !content) {

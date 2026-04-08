@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Subscription } from '@/lib/types';
 import { FaviconImage } from './FeedCard';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 interface SidebarProps {
   onFeedFilter?: (subscriptionId: string | null) => void;
@@ -24,6 +24,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get('view');
 
   const navItems = [
     { href: '/inbox', label: 'Today', icon: TodayIcon, filter: 'today' },
@@ -62,9 +64,16 @@ export default function Sidebar({
         {/* Nav items */}
         <nav className="flex-1 overflow-y-auto px-2 py-2">
           {navItems.map((item) => {
-            const isActive = item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href.split('?')[0]);
+            let isActive = false;
+            if (item.href === '/') {
+              isActive = pathname === '/';
+            } else if (item.href === '/saved') {
+              isActive = pathname === '/saved';
+            } else if (item.href === '/inbox?view=all') {
+              isActive = pathname === '/inbox' && currentView === 'all';
+            } else if (item.href === '/inbox') {
+              isActive = pathname === '/inbox' && currentView !== 'all';
+            }
 
             return (
               <Link
