@@ -17,6 +17,9 @@ function isValidFeedUrl(url: string): boolean {
     if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return false;
     if (hostname.startsWith('169.254.') || hostname.startsWith('10.') || hostname.startsWith('192.168.')) return false;
     if (hostname.startsWith('172.') && parseInt(hostname.split('.')[1]) >= 16 && parseInt(hostname.split('.')[1]) <= 31) return false;
+    // Block IPv6 loopback, private, and link-local addresses
+    const bare = hostname.replace(/^\[|\]$/g, '');
+    if (bare === '::1' || bare === '::' || bare.startsWith('fc') || bare.startsWith('fd') || bare.startsWith('fe80') || bare.startsWith('::ffff:')) return false;
     return true;
   } catch {
     return false;

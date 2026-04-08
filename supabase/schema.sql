@@ -106,9 +106,13 @@ CREATE POLICY "Users can update articles from own subscriptions" ON articles
     )
   );
 
--- Service role can insert/upsert articles (from API routes)
-CREATE POLICY "Service role can insert articles" ON articles
-  FOR INSERT WITH CHECK (true);
+-- Articles INSERT restricted to own subscriptions (service role bypasses RLS anyway)
+CREATE POLICY "Users can insert articles for own subscriptions" ON articles
+  FOR INSERT WITH CHECK (
+    subscription_id IN (
+      SELECT id FROM subscriptions WHERE user_id = auth.uid()
+    )
+  );
 
 -- Saved articles
 ALTER TABLE saved_articles ENABLE ROW LEVEL SECURITY;

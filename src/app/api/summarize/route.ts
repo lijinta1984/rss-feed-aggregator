@@ -32,15 +32,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if summary already exists
-    const { data: existing } = await supabase
+    // Verify article belongs to a subscription owned by the authenticated user
+    const { data: articleCheck } = await supabase
       .from('articles')
-      .select('summary')
+      .select('id, summary, subscription_id, subscriptions!inner(user_id)')
       .eq('id', article_id)
+      .eq('subscriptions.user_id', user.id)
       .single();
 
-    if (existing?.summary) {
-      return NextResponse.json({ summary: existing.summary });
+    if (!articleCheck) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 403 });
+    }
+
+    // Return cached summary if it already exists
+    if (articleCheck.summary) {
+      return NextResponse.json({ summary: articleCheck.summary });
     }
 
     const message = await anthropic.messages.create({
